@@ -893,7 +893,7 @@ class Head
 	private function _process_packages()
 	{
 		// get list of un-processed packs
-		$packs = array_diff($this->packs, (array)$this->packs_processed);
+		$packs = array_diff((array)$this->packs, (array)$this->packs_processed);
 		
 		// process the packages
 		foreach ($packs as $pack)
