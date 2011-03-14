@@ -1,4 +1,4 @@
-<?php
+<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 /**
  * Head Class
@@ -7,106 +7,127 @@
  * 
  * @license		GNU General Public License
  * @author		Adam Fairholm
- * @link		http://code.google.com/p/codeigniter-head-library
  * @email		adam.fairholm@gmail.com
+ * @forked by	Dan Smith
+ * @email		dansmith65@gmail.com
+ * @link		http://github.com/dansmith65/CodeIgniter-Head-Library/
  * 
  * @file		Head.php
- * @version		1.0
- * @date		10/30/2009
+ * @version		2.0
+ * @date		March 14, 2011
  * 
- * Copyright (c) 2009
+ * Copyright (c) 2011
  */
+
 
 class Head
 {
-	var $close_head					= TRUE;							//Should we use the closing </head> tag?
-	var $show_errors 				= TRUE;							//Should we throw a hissy fit?
-	var $debug						= FALSE;						//Should we debug?
-	var $output_string				= FALSE;						//Should we output this to a string? If not, then we'll use a constant
-	var $constant_name				= "HEAD";						//Name of constant to save to if we are going that route
+	var $packs;											// Packages to include
+	var $packs_processed;								// Packages that have included
+	var $meta;											// Additional Metadata	
+	var $css;											// CSS files
+	var $js;											// JavaScript files
+	var $inline_css;									// CSS code
+	var $inline_js;										// JavaScript code
+	var $feed;											// RSS/Atom feets
+	var $misc;											// Misc items to add in
+  	var $jquery;            							// JQuery Items
 	
-	var $js_location				= "js/";						//Location of the Javascript files
-	var $css_location				= "css/";						//Location of the CSS files
+	var $xml_doctypes = array('xhtml11',				// Doctypes that require some special XHTML love
+							'xhtml1-strict',
+							'xhtml1-trans',
+							'xhtml1-frame');
 	
-	var $packs 						= array();						//Packages to include
-	var $packages					= array();						//Packages
-		
-	var $doctype					= 'xhtml1-strict';				//Default Doctype
-	var $xml_doctypes 				= array('xhtml11',				//Doctypes that require some special XHTML love
-											'xhtml1-strict',
-											'xhtml1-trans',
-											'xhtml1-frame');
-						
-	var $use_base					= FALSE;						//Should we use the <base> tag?
-	var $base_target				= '';							//Target for the base, if needed
-	var $base_ref					= '';							//Href for the base. Uses base_url in config if blank
-	
-	var $site_title					= '';							//The title of the site
-	var $title 						= '';							//The title page
-	var $title_append				= TRUE;							//Should we append this to the site title?
-	var $title_append_str			= ' - ';						//How we should append, if necessary
-	
-	var $use_meta					= TRUE;							//I don't know, maybe someone doesn't want to
-	var $meta_content				= "text/html; charset=utf-8";	//Content type for meta data
-	var $meta_language				= "en";							//Language for meta data
-	var $meta_author				= '';							//Author name for the meta data
-	var $meta_description			= '';							//Description for the meta data
-	var $meta_keywords				= '';							//Keywords for the meta data
-	var $meta						= array();						//Additional Metadata
-	
-	var $use_favicon				= TRUE;							//Should we use the favicon?
-	var $favicon_location 			= "images/favicon.ico"; 		//Location of the favicon if we're using it
-	
-	var $ga_tracking_id				= '';							//Google Analytics Tracking Code
-	
-	var $defaults					= array();
-	var $css						= array();
-	var $js							= array();
-	var $inline						= array();
-	var $feeds						= array();
-	var $misc						= array();						//Misc items to add in
-  	var $jquery           			= array();            			//JQuery Items
-  	
-  	var $jquery_file				= "jquery.js";					//Name of JQuery file. You know the people like to make 'em crazy
+	// properties that can be set from configuration file
+	var $show_errors 		= TRUE;						// Should we throw a hissy fit?
+	var $close_head			= TRUE;						// Should we use the closing </head> tag?
+	var $debug				= FALSE;					// Should we debug?
+	var $output_string		= FALSE;					// Should we output this to a string? If not, then we'll use a constant
+	var $constant_name		= 'HEAD';					// Name of constant to save to if we are going that route
+	var $base_url			= '';						// URL to use for relative links, defaults to base_url from CI config
+	var $js_location		= 'assets/js/';					// Location of the Javascript files
+	var $css_location		= 'assets/css/';					// Location of the CSS files
+	var $doctype			= 'xhtml1-strict';			// Default Doctype
+	var $use_base			= FALSE;					// Should we use the <base> tag?
+	var $base_target		= '';						// Target for the base, if needed
+	var $base_ref			= '';						// Href for the base. Uses base_url in config if blank
+	var $site_title			= '';						// The title of the site
+	var $title 				= '';						// The title page
+	var $title_append		= TRUE;						// Should we append this to the site title?
+	var $title_append_str	= ' - ';					// How we should append, if necessary
+	var $use_meta			= TRUE;						// I don't know, maybe someone doesn't want to
+	var $meta_content		= '';						// Content type for meta data
+	var $meta_language		= 'en';						// Language for meta data
+	var $meta_author		= '';						// Author name for the meta data
+	var $meta_description	= '';						// Description for the meta data
+	var $meta_keywords		= '';						// Keywords for the meta data
+	var $use_favicon		= TRUE;						// Should we use the favicon?
+	var $favicon_location 	= 'assets/images/favicon.ico'; 	// Location of the favicon if we're using it
+	var $ga_tracking_id		= '';						// Google Analytics Tracking Code
+	var $jquery_file		= 'jquery.js';				// Name of JQuery file
+	var $packages			= array();					// Packages
+	var $defaults			= array();					// Default items to load
 
 	// --------------------------------------------------------------------------
 	
-	function Head( $config = array() )
+	public function __construct($config = array())
 	{
-		$this->CI =& get_instance();
+		$CI =& get_instance();
 	
-		//We need the html helper
-		if( ! function_exists('br') )
-			$this->CI->load->helper('html');
+		// We need the html helper
+		if ( ! function_exists('br'))
+		{
+			$CI->load->helper('html');
+		}
 			
-		//Get some handy URLs
-		$this->base_url		= base_url();
-		$this->link_url 	= site_url();
+		// set default base_url
+		$this->base_url	= $CI->config->item('base_url');
+		
+		// set default meta_content
+		$meta_content = 'text/html; charset='.$CI->config->item('charset');
 		
 		//Initialize the configs
-		if(count($config) > 0)
+		if (count($config) > 0)
 		{
 			$this->initialize($config);
+		}
+		else
+		{
+			// include defaults, so they are output before all others
+			$this->_process_defaults();
 		}
 	}
 
 	// --------------------------------------------------------------------------
 	
 	/**
-	 * Initialize Configs
+	 * Initialize the user preferences
 	 *
-	 * @param	array [$config] assoc array of configs to be initialized
+	 * Accepts an associative array as input
+	 *
+	 * @access	public
+	 * @param	array	config preferences
 	 * @return	void
 	 */
-	function initialize($config)
+	public function initialize($config = array())
 	{
-		foreach($config as $key => $var)
+		foreach ($config as $key => $val)
 		{
-			$this->$key = $var;
+			if (isset($this->$key))
+			{
+				$this->$key = $val;
+			}
+		}
+		
+		// if config contained defaults
+		if (isset($config['defaults']))
+		{
+			// include defaults, so they are output before all others
+			$this->_process_defaults();
 		}
 	}
 
-	// --------------------------------------------------------------------------
+	// --------------------------------------------------------------------
 	
 	/**
 	 * Render Head <head></head>
@@ -116,99 +137,290 @@ class Head
 	 * @param	array [$passed_config]
 	 * @return	void or string
 	 */
-	function render_head($passed_config = array())
+	public function render_head($passed_config = array())
 	{
-		if(count($passed_config) > 0)
+		if (count($passed_config) > 0)
 		{
 			$this->initialize($passed_config);
 		}
+		
+		// Start the party
+		
+		$this->_process_packages();
+		
+		$html  = $this->_render_doctype();
+		
+		$html .= $this->_render_html().PHP_EOL.'<head>'.$this->_bump(FALSE);
+		
+		if ($this->use_base)
+		{
+			$html .= $this->_render_base();
+		}
+		
+		if ($this->use_meta)
+		{
+			$html .= $this->_render_meta();
+		}
+		
+		$html .= $this->_render_custom_meta();
+		
+		if ($this->use_favicon)
+		{
+			$html .= $this->_render_favicon();
+		}
+		
+		$html .= $this->_render_items('css');
+		$html .= $this->_render_inline('css');
+		$html .= $this->_bump(FALSE);
 
-		//Start the party
-		
-		$html  = $this->render_doctype();
-		
-		$html .= $this->render_html().$this->bump(FALSE).'<head>'.$this->bump();
-		
-		if($this->use_base)
+		// Jquery likes to be loaded first, so if we are using it,
+		// make it the first value in the array
+		if ( ! is_array($this->js))
 		{
-			$html .= $this->render_base();
+			$this->js = (array)$this->js;
 		}
-		
-		if($this->use_meta)
+		$jquery_location = array_search($this->jquery_file, $this->js);
+		if ($jquery_location !== FALSE OR ! empty($this->jquery))
 		{
-			$html .= $this->render_meta();
-		}
-		
-		if($this->use_favicon)
-		{
-			$html .= $this->render_favicon();
-		}
-
-    	$html .= $this->include_default_packages();
-    	
-    	array_unique($this->packs);
-		
-		$this->process_packages();
-		
-		$html .= $this->render_items("css");
-		
-		//Jquery
-		//Jquery likes to be loaded first, so if we are using it, let's get it in there
-		if( array_key_exists($this->jquery_file, $this->js) || ! empty($this->jquery) )
-		{
-			$html .= '<script type="text/javascript" src="'.$this->base_url.$this->js_location.$this->jquery_file.'"></script>'.$this->bump(FALSE);
-			
-			unset($this->js[$this->jquery_file]);
-		}
-		
-		$html .= $this->render_items("js");
-		
-    	$html .= $this->render_jquery();
-    	
-		
-		if(count($this->feeds) > 0)
-		{
-			foreach($this->feeds as $feed_link)
+			if ($jquery_location !== FALSE)
 			{
-				$html .= $feed_link.$this->bump(FALSE);
+				unset($this->js[$jquery_location]);
 			}
-			
-			$html .= $this->bump(FALSE);
-		}
-
-		if(count($this->inline) > 0)
-		{
-			foreach($this->inline as $inline_code)
-			{
-				$html .= $inline_code;
-			}
-			
-			$html .= $this->bump();
+			array_unshift($this->js, $this->jquery_file);
 		}
 		
-		$html .= $this->render_misc();
+		$html .= $this->_render_inline('js');
+		$html .= $this->_render_items('js');
+		$html .= $this->_render_jquery();
+		$html .= $this->_bump(FALSE);
 		
-		$html .= $this->render_title();
+		$html .= $this->_render_feed();
 		
-		$html .= $this->render_ga();
+		$html .= $this->_render_misc();
 		
-		if( $this->close_head )
+		$html .= $this->_render_title();
+		
+		$html .= $this->_render_ga();
+		
+		if ($this->close_head)
 		{
-			$html .= '</head>'.$this->bump();
+			$html .= '</head>';
 		}
 		
 		//Debug
-		if($this->debug == TRUE)
-			$this->check_head();
+		if ($this->debug == TRUE)
+		{
+			$this->_check_head();
+		}
 		
 		//Final out
-		if( $this->output_string == TRUE )
+		if ($this->output_string == TRUE)
+		{
 			return $html;
+		}
 		else
+		{
 			define($this->constant_name, $html);
+		}
 	}
 
 	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add a package to head
+	 *
+	 * @param	mixed string or array
+	 *				as string:[$packs] separated by "|"
+	 *				as array: array of package names
+	 * @return	void
+	 */
+	public function add_package($packs)
+	{
+		if (is_string($packs))
+		{
+			$packs = explode('|', $packs);
+		}
+
+		foreach($packs as $pack)
+		{
+			$this->_save_package($pack);
+		}
+		
+		// processing all packages as they are added has all items
+		// be output in the order they were declared
+		$this->_process_packages();
+	}
+	
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * alias of add_package
+	 * DEPRECIATED!
+	 */
+	public function include_packages($packs)
+	{
+		$this->add_package($packs);
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add a meta item
+	 * 
+	 * Allows you to create a new meta item
+	 *
+	 * @param	string [$name] name of the meta item
+	 * @param	string [$content] meta content
+	 * @param	string [$name_or_equiv] "name" or "equiv" meta. Defaults to "name"
+	 * @return 	void
+	 */
+	public function add_meta($name, $content, $name_or_equv = 'name')
+	{
+		$this->_process_item(array(array($name, $content, $name_or_equv)), 'meta');
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add a CSS file link tag
+	 *
+	 * @param	string [$file] filename of the CSS file
+	 * @param	string [$media] media type. Defaults to "all"
+	 * @param	string [$condition] conditional statement to wrap <style> tag in. Defaults to NULL
+	 * @return	void
+	 */
+	function add_css($file, $media="all", $condition=NULL)
+	{
+		$this->_process_item(array(array($file, $media, $condition)), 'css');
+	}
+	
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add a JS file link tag
+	 *
+	 * @param	string [$file] file name of the JS file
+	 * @return	void
+	 */
+	function add_js($file, $condition=NULL)
+	{
+		$this->_process_item(array(array($file, $condition)), 'js');
+	}
+	
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add a CSS or JS file link tag
+	 * 
+	 * same result as using either add_js or add_css
+	 * 
+	 * @param	mixed string or array [$item] filename of file, and options (if any)
+	 * @return	void
+	 */
+	function add($item, $opt1=NULL, $opt2=NULL)
+	{
+		if ($opt2 !== NULL)
+		{
+			$this->_process_item(array(array($item, $opt1, $opt2)));
+		}
+		elseif ($opt1 !== NULL)
+		{
+			$this->_process_item(array(array($item, $opt1)));
+		}
+		else
+		{
+			$this->_process_item($item);
+		}
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add some JQuery code
+	 *
+	 * @param	string [$code] the JQuery code to be added
+	 * @return	void
+	 */
+	function add_jquery($code)
+	{
+		$this->_process_item($code, 'jquery');
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add some inline CSS code
+	 *
+	 * @param	string [$code] The code to add
+	 * @return	void
+	 */
+	function add_inline_css($code)
+	{
+		$this->_process_item($code, 'inline_css');
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add some inline JS code
+	 *
+	 * @param	string [$code] The code to add
+	 * @return	void
+	 */
+	function add_inline_js($code)
+	{
+		$this->_process_item($code, 'inline_js');
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add some inline CSS code or JS code
+	 *
+	 * DEPRECIATED! Kept for backwards compatability.
+	 * use add_inline_css() or add_inline_js() instead
+	 * 
+	 * @param	string [$code] The code to inserted
+	 * @param	string [$js_or_css] set to "js" or "css"
+	 * @return	void
+	 */
+	function add_inline($code, $js_or_css)
+	{
+		$this->_process_item($code, 'inline_'.$js_or_css);
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add RSS or Atom feed link
+	 *
+	 * @param	string [$feed] full feed URL
+	 * @param	string [$name] feed title
+	 * @param	string [$rss_or_atom] RSS or Atom. Defaults to RSS.
+	 */
+	function add_feed($feed, $name, $rss_or_atom = 'rss')
+	{
+		$this->_process_item(array(array($feed, $name, $rss_or_atom)), 'feed');
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add misc
+	 *
+	 * Add pretty much anything into the head document
+	 *
+	 * @param	string [$code] code to add to head
+	 * @return	void
+	 */
+	public function add_misc($code)
+	{
+		$this->_process_item($code, 'misc');
+	}
+
+	// --------------------------------------------------------------------------
+	
+	
 	
 	/**
 	 * Render Doctype
@@ -218,31 +430,30 @@ class Head
 	 *
 	 * @return	string doctype
 	 */
-	function render_doctype()
-	{		
+	private function _render_doctype()
+	{
 		$doc = doctype($this->doctype);
 		
-		if( ! trim($doc))
+		if ( ! trim($doc))
 		{
-			$this->handle_error('Invalid Doctype');
+			$this->_handle_error(__FUNCTION__.': Invalid Doctype');
 		}
 		else
 		{
-			return $doc.$this->bump();
+			return $doc.PHP_EOL;
 		}
-		
 	}
 
 	// --------------------------------------------------------------------------
-
+	
 	/**
 	 * Render the html opening tag
 	 * 
 	 * @return	string
 	 */
-	function render_html()
+	private function _render_html()
 	{
-		if(in_array($this->doctype, $this->xml_doctypes))
+		if (in_array($this->doctype, $this->xml_doctypes))
 		{
 			return '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="'.$this->meta_language.'" lang="'.$this->meta_language.'">';
 		}
@@ -253,17 +464,17 @@ class Head
 	}
 
 	// --------------------------------------------------------------------------
-
+	
 	/**
 	 * Render the base tag
 	 *
 	 * @return	string
 	 */
-	function render_base()
+	private function _render_base()
 	{
-		if( ! $this->base_ref)
+		if ( ! $this->base_ref)
 		{
-			$base = $this->CI->config->item('base_url');
+			$base = $this->base_url;
 		}
 		else
 		{
@@ -272,12 +483,303 @@ class Head
 			
 		$out = '<base href="'.$base.'"';
 		
-		if($this->base_target)
+		if ($this->base_target)
 		{
 			$out .= ' '.$this->base_target;
 		}
 	
-		return $out .= ' />'.$this->bump();
+		return $out .= ' />'.$this->_bump();
+	}
+
+	// --------------------------------------------------------------------------
+	
+	
+	/**
+	 * Render metadata
+	 *
+	 * @return	string
+	 */
+	private function _render_meta()
+	{
+		$out = '';
+		
+		if ($this->meta_content)
+		{
+			$out .= meta('content-type', $this->meta_content, 'equiv').$this->_indent();
+		}
+	
+		if ($this->meta_language)
+		{
+			$out .= meta('content-language', $this->meta_language, 'equiv').$this->_indent();
+		}
+	
+		if ($this->meta_author)
+		{
+			$out .= meta('author', $this->meta_author).$this->_indent();
+		}
+		
+		if ($this->meta_description)
+		{
+			$out .= meta('description', $this->meta_description).$this->_indent();
+		}
+		
+		if ($this->meta_keywords)
+		{
+			$out .= meta('keywords', $this->meta_keywords).$this->_indent();
+		}
+		
+		// add extra line of whitespace if there is no more metadata to add
+		if (count($this->meta) == 0)
+		{
+			$out .= $this->_bump(FALSE);
+		}
+		
+		return $out;
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render metadata that was added via add_meta(), packages, or default
+	 *
+	 * @return	string
+	 */
+	private function _render_custom_meta()
+	{
+		$out = '';
+		
+		if (is_array($this->meta) && count($this->meta)>0)
+		{
+			foreach($this->meta as $meta_item)
+			{
+				if ( ! is_array($meta_item) OR count($meta_item)<2)
+				{
+					$this->_handle_error('custom meta item had too few parameters');
+				}
+				elseif (count($meta_item) == 2)
+				{
+					$out .= meta($meta_item[0], $meta_item[1]);
+				}
+				elseif (count($meta_item) == 3)
+				{
+					$out .= meta($meta_item[0], $meta_item[1], $meta_item[2]);
+				}
+				else
+				{
+					$this->_handle_error('custom meta item had too many parameters');
+				}
+				
+				$out .= $this->_indent();
+			}
+			$out .= $this->_bump(FALSE);
+		}
+		
+		return $out;
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render Favicon
+	 *
+	 * @return	string
+	 */
+	private function _render_favicon()
+	{
+		return '<link rel="shortcut icon" href="'.$this->_get_link($this->favicon_location, 'favicon').'" />'.$this->_bump();
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render CSS or JS
+	 *
+	 * @return	string
+	 */
+	private function _render_items($type)
+	{
+		$out = '';
+		
+		if ($type == 'css')
+		{
+			foreach($this->$type as $it)
+			{
+				// ensure it is an array with 3 values
+				$it = array_pad((array)$it, 3, NULL);
+				$file = $it[0];
+				$media = $it[1]!=NULL ? $it[1] : 'all';
+				$condition = $it[2];
+				
+				if ($condition !== NULL)
+				// open condition
+				{
+					$out .= '<!--[if '.$condition.']>'.$this->_bump(FALSE);
+				}
+				
+				// create html
+				$out .= '<link type="text/css" href="'.$this->_get_link($file, $type).'" rel="stylesheet" media="'.$media.'" />'.$this->_bump(FALSE);
+				
+				if ($condition !== NULL)
+				// close condition
+				{
+					$out .= '<![endif]-->'.$this->_bump(FALSE);
+				}
+			}
+		}
+		elseif ($type == 'js')
+		{
+			foreach($this->$type as $it)
+			{
+				// ensure it is an array with 2 values
+				$it = array_pad((array)$it, 2, NULL);
+				$file = $it[0];
+				$condition = $it[1];
+				
+				if ($condition !== NULL)
+				// open condition
+				{
+					$out .= '<!--[if '.$condition.']>'.$this->_bump(FALSE);
+				}
+				
+				// create html
+				$out .= '<script type="text/javascript" src="'.$this->_get_link($file, $type).'"></script>'.$this->_bump(FALSE);
+				
+				if ($condition !== NULL)
+				// close condition
+				{
+					$out .= '<![endif]-->'.$this->_bump(FALSE);
+				}
+			}
+		}
+		else
+		{
+			$this->_handle_error(__FUNCTION__.': invalid parameter: '.$type);
+		}
+		
+		return $out;
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render inline CSS or JS code
+	 *
+	 * @param	string [$type] "js" or "css"
+	 * @return	void
+	 */
+	private function _render_inline($type)
+	{
+		$out = '';
+		
+		if ($type == 'css')
+		{
+			if (count($this->inline_css)>0)
+			{
+				$out = '<style type="text/css">'.$this->_bump(FALSE).$this->_indent();
+				$out .= implode($this->_bump(FALSE).$this->_indent(), $this->inline_css);
+				$out .= $this->_bump(FALSE).'</style>'.$this->_bump(FALSE);
+			}
+		}
+		elseif ($type == 'js')
+		{
+			if (count($this->inline_js)>0)
+			{
+				$out = '<script type="text/javascript" language="javascript">'.$this->_bump(FALSE);
+				$out .= '// <![CDATA['.$this->_bump(FALSE).$this->_indent();
+				$out .= implode($this->_bump(FALSE).$this->_indent(), $this->inline_js);
+				$out .= $this->_bump(FALSE).'// ]]>'.$this->_bump(FALSE);
+				$out .= '</script>'.$this->_bump(FALSE);
+			}
+		}
+		
+		return $out;
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render JQuery
+	 *
+	 * Takes all the JQuery items and spits them out in the document.ready function
+	 * 
+	 * @return	string
+	 */
+	private function _render_jquery()
+	{
+		if (count($this->jquery)>0)
+	    {
+			$out = '<script type="text/javascript" language="javascript">'.$this->_bump(FALSE);
+			$out .= '// <![CDATA['.$this->_bump(FALSE);
+			$out .= '$(document).ready(function(){'.$this->_bump(FALSE);
+
+			foreach($this->jquery as $code)
+			{
+				$out .= $this->_indent().$code.$this->_bump(FALSE);
+			}
+
+			$out .= '});'.$this->_bump(FALSE);
+			$out .= '// ]]>'.$this->_bump(FALSE);
+			$out .= '</script>'.$this->_bump(FALSE);
+
+			return $out;
+	    }
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render metadata that was added via add_meta(), packages, or default
+	 * 
+	 * @return	string
+	 */
+	private function _render_feed()
+	{
+		$out = '';
+		
+		if (is_array($this->feed) && count($this->feed)>0)
+		{
+			foreach($this->feed as $feed)
+			{
+				if ( ! is_array($feed) OR count($feed)<2)
+				{
+					$this->_handle_error('feed item had too few parameters');
+				}
+				elseif (count($feed) > 3)
+				{
+					$this->_handle_error('feed item had too many parameters');
+				}
+				$href = $feed[0];
+				$name = $feed[1];
+				$rss_or_atom = isset($feed[2]) ? $feed[2] : 'rss';
+				$rss_or_atom = strtolower($rss_or_atom);
+				
+				$out .= '<link href="'.$href.'" type="application/'.$rss_or_atom.'+xml" rel="alternate" title="'.$name.'" />'.$this->_bump(FALSE);
+			}
+			$out .= $this->_bump(FALSE);
+		}
+		
+		return $out;
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Render the misc items
+	 */
+	private function _render_misc()
+	{
+		$out = '';
+	
+		if (count($this->misc)>0)
+		{
+			foreach ($this->misc as $item)
+			{
+				$out .= $item.$this->_bump(FALSE);
+			}
+			$out .= $this->_bump(FALSE);
+		}
+		
+		return $out;
 	}
 
 	// --------------------------------------------------------------------------
@@ -287,16 +789,18 @@ class Head
 	 *
 	 * @return	string
 	 */
-	function render_title()
+	private function _render_title()
 	{
 		$out = '<title>';
 		
-		if($this->title_append)
+		if ($this->title_append)
 		{
 			$out .= $this->site_title.$this->title_append_str;
 		}
 		
-		return $out.= $this->title.'</title>'.$this->bump();
+		$out.= $this->title.'</title>'.PHP_EOL;
+		
+		return $out;
 	}
 
 	// --------------------------------------------------------------------------
@@ -306,9 +810,9 @@ class Head
 	 *
 	 * @return 	string
 	 */
-	function render_ga()
+	private function _render_ga()
 	{
-		if( $this->ga_tracking_id != '' )
+		if ($this->ga_tracking_id != '')
 		{
 			return '
 			
@@ -324,7 +828,7 @@ class Head
     var s = document.getElementsByTagName(\'script\')[0]; s.parentNode.insertBefore(ga, s);
   })();
 
-</script>				
+</script>
 			';
 		}
 		
@@ -333,411 +837,7 @@ class Head
 
 	// --------------------------------------------------------------------------
 	
-	/**
-	 * Render metadata
-	 *
-	 * @return	string
-	 */
-	function render_meta()
-	{
-		$out = '';
-		
-		if($this->meta_content)
-		{
-			$out .= meta('content-type', $this->meta_content, 'equiv').$this->indent();
-		}
 	
-		if($this->meta_language)
-		{
-			$out .= meta('content-language', $this->meta_language, 'equiv').$this->indent();
-		}
-	
-		if($this->meta_author)
-		{
-			$out .= meta('author', $this->meta_author).$this->indent();
-		}
-		
-		if($this->meta_description)
-		{
-			$out .= meta('description', $this->meta_description).$this->indent();
-		}
-		
-		if($this->meta_keywords)
-		{
-			$out .= meta('keywords', $this->meta_keywords).$this->indent();
-		}
-		
-		//Take the extra meta and process those
-		
-		if(count($this->meta) > 0)
-		{
-			foreach($this->meta as $meta_item)
-			{
-				$out  .= $meta_item.$this->indent();
-			}
-		}
-
-		return $out .= $this->bump(FALSE);
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Add a meta item
-	 * 
-	 * Allows you to create a new meta item
-	 *
-	 * @param	string [$name] name of the meta item
-	 * @param	string [$content] meta content
-	 * @param	string [$name_or_equiv] "name" or "equiv" meta. Defaults to "name"
-	 * @return 	void
-	 */
-	function add_meta($name, $content, $name_or_equv = "name")
-	{
-		$this->meta[] = meta($name, $content, $name_or_equv);
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Render Favicon
-	 *
-	 * @return	string
-	 */
-	function render_favicon()
-	{
-		return '<link rel="shortcut icon" href="'.$this->base_url.$this->favicon_location.'" />'.$this->bump();
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Render the CSS and JS
-	 *
-	 * @return	string
-	 */
-	function render_items($type)
-	{
-		$out = '';
-	
-		foreach($this->$type as $it)
-		{
-			$out .= $it.$this->bump(FALSE);
-		}
-		
-		return $out.$this->bump(FALSE);
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Add misc
-	 *
-	 * Add pretty much anything into the head document
-	 *
-	 * @param	string [$code] code to add to head
-	 * @return	void
-	 */
-	function add_misc($code)
-	{
-		$this->misc[] = $code;
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Render the misc items
-	 */
-	function render_misc()
-	{
-		$out = "";
-	
-		if( ! empty($this->misc) )
-		{
-			foreach( $this->misc as $item )
-			{
-				$out .= $item.$this->bump();
-			}
-		}
-		
-		return $out;
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Include a package in the mix
-	 *
-	 * @param	string [$packs] separated by "|"
-	 * @return	void
-	 */
-	function include_packages($packs)
-	{
-		$pks = explode("|", $packs);
-
-		foreach($pks as $pk)
-		{
-			//Check and see if it exists
-			if( ! array_key_exists($pk, $this->packages))
-			{
-				$this->handle_error("Package '".$pk."' is not supported");
-			}
-			else
-			{
-				$this->packs[] = $pk;
-			}
-		}
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Include default packages
-	 */
-	function include_default_packages()
-	{
-		foreach( $this->defaults['packages'] as $def_package )
-		{
-			//Check and see if it exists
-			if( ! array_key_exists($def_package, $this->packages) )
-			{
-				$this->handle_error("Package '".$def_package."' is not supported");
-			}
-			else
-			{
-				$this->packs[] = $def_package;
-			}
-		}
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Process the packages from the config file
-	 * 
-	 * @return 	void
-	 */
-	function process_packages()
-	{
-		//Clean packages
-		$defaults = $this->defaults;
-		unset($defaults['packages']);
-	
-		//First, go through the defaults.
-		foreach($defaults as $def_file)
-		{
-			$this->process_file($def_file);
-		}
-		
-		//Now process the packages
-		foreach($this->packs as $pck)
-		{
-			foreach($this->packages[$pck] as $fl)
-			{
-				$this->process_file($fl);
-			}
-		}
-		
-		//Get rid of the duplicates
-		$this->css 	= array_unique($this->css);
-		$this->js 	= array_unique($this->js);
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Takes a filename and determines if it is a css or js, and then takes
-	 * The appropriate action
-	 * 
-	 * @param	string [$filename]
-	 * @return	void
-	 */
-	function process_file($filename)
-	{
-		$elems = explode(".", $filename);
-		
-		$filetype = $elems[count($elems)-1];
-		
-		if($filetype == "css")
-		{
-			$this->add_css($filename);
-		}
-		else if($filetype == "js")
-		{
-			$this->add_js($filename);
-		}
-		else
-		{
-			$this->handle_error("Unable to process unknown file type: ".$filename);
-		}
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Add a CSS file link tag
-	 *
-	 * @param	string [$file] filename of the CSS file
-	 * @param	string [$media] media type. Defaults to "all"
-	 * @return	void
-	 */
-	function add_css($file, $media="all")
-	{
-		$this->css[$file] = '<link href="'.$this->base_url.$this->css_location.$file.'" rel="stylesheet" media="'.$media.'" type="text/css" />';
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Add a JS file link tag
-	 *
-	 * @param	string [$file] file name of the JS file
-	 * @return	void
-	 */
-	function add_js($file)
-	{
-		$this->js[$file] = '<script type="text/javascript" src="'.$this->base_url.$this->js_location.$file.'"></script>';
-	}
-
-	// --------------------------------------------------------------------------
-
-	/**
-	 * Add some JQuery code
-	 *
-	 * @param	string [$code] the JQuery code to be added
-	 * @return	void
-	 */
-	function add_jquery($code)
-	{
-		$this->jquery[] = $code;
-	}
-
-	// --------------------------------------------------------------------------
-	
-	/**
-	 * Add some inline CSS code or JS code
-	 *
-	 * @param	string [$code] The code to inserted
-	 * @return	string [$js_or_css] set to "js" or "css"
-	 */
-	function add_inline($code, $js_or_css)
-	{
-		$js_or_css = strtolower($js_or_css);
-	
-		if($js_or_css == "css")
-		{
-			$this->inline[] = "<style type=\"text/css\">
-		$code				
-	</style>";
-		}
-		else if($js_or_css == "js")
-		{
-			$this->inline[] = '<script type="text/javascript" language="javascript">
-			  // <![CDATA[
-			  	'.$code.'
-			  // ]]>
-			</script>';
-		} 
-	}
-
-	// --------------------------------------------------------------------------
-
-	/**
-	 * Render JQuery
-	 *
-	 * Takes all the JQuery items and spits them out in the document.ready function
-	 * 
-	 * @return	void
-	 */
-	function render_jquery()
-	{
-		if( ! empty($this->jquery) )
-	    {
-	  		$out = '<script type="text/javascript" language="javascript">
-	        // <![CDATA[
-	        $(document).ready(function(){
-	          ';
-	          
-	      	foreach($this->jquery as $code)
-	      	{
-	        	$out .= $code.$this->bump(FALSE);
-	      	}
-	          
-	      	$out .= '
-	      	});
-	        	// ]]>
-	      	</script>
-	  		';
-	    
-	      return $out;
-	    }
-	    else
-	    {
-	    	return '';
-	    }
-	}
-
-	// --------------------------------------------------------------------------
-	  
-	/**
-	 * Add RSS or Atom feed link
-	 *
-	 * @param	string [$feed] full feed URL
-	 * @param	string [$name] feed title
-	 * @param	string [$rss_or_atom] RSS or Atom. Defaults to RSS.
-	 */
-	function add_feed($feed, $name, $rss_or_atom = "rss")
-	{
-		$rss_or_atom = strtolower($rss_or_atom);
-	
-		$this->feeds[] = '<link href="'.$feed.'" type="application/'.$rss_or_atom.'+xml" rel="alternate" title="'.$name.'" />';
-	}
-	
-	// --------------------------------------------------------------------------
-
-	/**
-	 * Checks the doctype and makes sure the stuff needed in the head is there
-	 *
-	 * @return 	TRUE on ok, string (ul of errors) if not ok
-	 */
-	function check_head()
-	{
-		$errors = '';
-	
-		//Check all the links for CSS
-		foreach($this->css as $file => $link)
-		{
-			if( ! file_exists("./".$this->css_location.$file))
-			{
-				$errors .= '<li>'.$file.' not found</li>';
-			}
-		}
-
-		//Check all the links for JS
-		foreach($this->js as $file => $link)
-		{
-			if( ! file_exists("./".$this->js_location.$file))
-			{
-				$errors .= '<li>'.$file.' not found</li>';
-			}
-		}
-		
-		//Check for favicon
-		if($this->use_favicon)
-		{
-			if( ! file_exists("./".$this->favicon_location))
-			{
-				$errors .= '<li>Favicon not found</li>';
-			}
-		}
-		
-		if(trim($errors))
-		{
-			show_error("The following errors were encountered in the head area: <ul>".$errors."</ul>");
-		}
-	}	
-
-	// --------------------------------------------------------------------------
 	
 	/**
 	 * Handles our error and sees if we want to keep quiet or not
@@ -746,10 +846,187 @@ class Head
 	 * @access	private
 	 * @return 	void
 	 */
-	private function handle_error($msg)
+	private function _handle_error($msg)
 	{
-		if($this->show_errors)
+		log_message('error', __CLASS__ .' --> '.$msg);
+		if ($this->show_errors)
+		{
 			show_error($msg);
+		}
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Add defaults to appropriate properties
+	 * 
+	 * @return	void
+	 */
+	private function _process_defaults()
+	{
+		// process defaults
+		foreach ($this->defaults as $type => $item)
+		{
+			$this->_process_item($item, $type);
+		}
+		
+		// process default packages
+		if (isset($this->defaults['packages']))
+		{
+			foreach ((array)$this->defaults['packages'] as $def_package)
+			{
+				$this->_save_package($def_package);
+			}
+			
+			// process the defaults from the packs property
+			$this->_process_packages();
+		}
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Process the packages from packs property
+	 * 
+	 * @return 	void
+	 */
+	private function _process_packages()
+	{
+		// get list of un-processed packs
+		$packs = array_diff($this->packs, (array)$this->packs_processed);
+		
+		// process the packages
+		foreach ($packs as $pack)
+		{
+			foreach ($this->packages[$pack] as $type => $item)
+			{
+				$this->_process_item($item, $type);
+			}
+			
+			// add pack to list of processed packs
+			$this->packs_processed[] = $pack;
+		}
+	}
+	
+	// --------------------------------------------------------------------------
+	
+	/*
+	 * Save a package name and all it's dependant package's names to the packs property
+	 */
+	private function _save_package($package)
+	{
+		// recursively process dependant packages
+		if (isset($this->packages[$package]['packages']))
+		{
+			foreach((array)$this->packages[$package]['packages'] as $dependant_pack)
+			{
+				$this->_save_package($dependant_pack);
+			}
+		}
+		
+		// check if package exists
+		if ( ! array_key_exists($package, $this->packages))
+		{
+			$this->_handle_error("Package '$package' is not declared in config file");
+		}
+		else
+		{
+			// only save package if it has not already been saved
+			if ( ! is_array($this->packs) OR ! in_array($package, $this->packs))
+			{
+				$this->packs[] = $package;
+			}
+		}
+	}
+
+	// --------------------------------------------------------------------------
+	
+	/**
+	 * Main processor for all items: css, js, inline_css, inline_js, jquery, misc
+	 * 
+	 * Takes user input and saves it to the correct property, in a consistent format
+	 * 
+	 * @param	mixed string or array	item to add to appropriate property
+	 *				if array: (type, item, [options])
+	 *				if string: wil determine type by file extension,
+	 *							only css and js are supported as strings
+	 * @return	void
+	 * 
+	 * SETS THESE VALUES
+	 * $this->css[]			string or array
+	 * $this->js[]			'filename.js'
+	 * $this->inline_css[]	'user-supplied code'
+	 * $this->inline_js[]	'user-supplied code'
+	 * $this->misc[]		'user-supplied code'
+	 * $this->jquery[]		'user-supplied code'
+	 * 
+	 */
+	private function _process_item($item, $type=NULL)
+	{
+		// ignore type='packages'
+		// that type is used to include dependant packages
+		if ($type == 'packages') return;
+		
+		$valid_types = array('css', 'js', 'inline_css', 'inline_js', 'jquery', 'misc', 'meta', 'feed');
+		
+		// cast item to an array
+		$item = (array)$item;
+		
+		// determine type based on the file's extension
+		// if type is numeric, then an indexed array was used
+		// this was the prior format, which is supported for css or js files only
+		if ($type == NULL OR is_numeric($type))
+		{
+			$file = is_array($item[0]) ? $item[0][0] : $item[0];
+			$elems = explode('.', $file);
+			$type = array_pop($elems);
+			if ($type != 'css' && $type != 'js')
+			{
+				$this->_handle_error(__FUNCTION__.': could not determine type for: '.print_r($item, TRUE).'. Item was left out of head.');
+				return;
+			}
+		}
+		
+		// validate type
+		if ( ! in_array($type, $valid_types))
+		{
+			$this->_handle_error(__FUNCTION__.': type: '.$type.' is not valid');
+			return;
+		}
+		
+		// add each item to appropriate property
+		foreach ($item as $it)
+		{
+			// set optional parameters
+			// this causes test for in_array to match whether the
+			// optional parameter was provided or not
+			if ($type=='meta' && ! isset($it[2]))
+			{
+				$it[2] = 'name';
+			}
+			elseif ($type=='css')
+			{
+				if ( ! isset($it[1]))
+				{
+					$it[1] = 'all';
+				}
+				elseif ( ! isset($it[2]))
+				{
+					$it[2] = NULL;
+				}
+			}
+			elseif ($type=='feed' && ! isset($it[2]))
+			{
+				$it[2] = 'rss';
+			}
+			// DO NOT add duplicate items
+			if (is_array($this->{$type})
+				&& in_array($it, $this->{$type}))
+			{
+				continue;
+			}
+			$this->{$type}[] = $it;
+		}
 	}
 
 	// --------------------------------------------------------------------------
@@ -761,9 +1038,9 @@ class Head
 	 * @param	string [$new_line] should we add a new line in there?
 	 * @return	string
 	 */
-	private function bump($new_line = TRUE)
+	private function _bump($new_line = TRUE)
 	{
-		if($new_line)
+		if ($new_line)
 		{
 		return '
 		
@@ -773,12 +1050,125 @@ class Head
 		return '
 	';		}
 	}
+
+	// --------------------------------------------------------------------------
 	
-	private function indent()
+	/**
+	 * Return indents; use for formatting html output
+	 * 
+	 * @param	int		# of indents to return
+	 * @return	string	
+	 */
+	private function _indent($times=1)
 	{
-		return '	';
+		$indent = "\t";
+		$out = '';
+		for ($i=$times; $i>0; $i--)
+		{
+			$out .= $indent;
+		}
+		return $out;
 	}
 
+	// --------------------------------------------------------------------------
+	
+	/**
+	* Convert user-provided link into a link that can be used in the HTML
+	*
+	* link with leading '/', will prepend with domain name.
+	* Link with URL will not be changed.
+	*
+	* @access	private
+	* @param	string file (can be url, relative, or absolute)
+	* @param	string type (can be 'css', 'js', 'favicon')
+	* @return   string
+	*/
+	private function _get_link($file, $type)
+	{
+		// this regex patter was taken from carabiner library
+		$pattern = '@(https?://([-\w\.]+)+(:\d+)?(/([\w/_\.]*(\?\S+)?)?)?)@';
+		if (preg_match($pattern, $file))
+		// is URL
+		{
+			return $file;
+		}
+		elseif (substr($file, 0, 1) == '/')
+		// is absolute
+		{
+			return $file;
+		}
+		elseif ($type == 'css')
+		// css in default location
+		{
+			return $this->base_url.$this->css_location.$file;
+		}
+		elseif ($type == 'js')
+		// javascript in default location
+		{
+			return $this->base_url.$this->js_location.$file;
+		}
+		elseif ($type == 'favicon')
+		// favicon in default location
+		{
+			return $this->base_url.$file;
+		}
+		else
+		// INVALID parameters
+		{
+			log_message('error', __METHOD__.' --> '.'invalid parameters: file['.$file.'] type'.$type.']');
+			return NULL;
+		}
+	}
+
+	// --------------------------------------------------------------------------	
+	
+	/**
+	 * Checks the doctype and makes sure the stuff needed in the head is there
+	 *
+	 * @return 	TRUE on ok, string (ul of errors) if not ok
+	 */
+	private function _check_head()
+	{
+		show_error('debug does not work with the current version of Head library');
+	
+		$errors = '';
+	
+		//Check all the links for CSS
+		foreach((array)$this->css as $css)
+		{
+			$file = is_array($css) ? $css[0] : $css;
+			if ( ! file_exists($this->_get_link($file, 'css')))
+			{
+				$errors .= '<li>'.$file.' not found</li>';
+			}
+		}
+
+		//Check all the links for JS
+		foreach((array)$this->js as $js)
+		{
+			$file = is_array($js) ? $js[0] : $js;
+			if ( ! file_exists($this->_get_link($file, 'js')))
+			{
+				$errors .= '<li>'.$file.' not found</li>';
+			}
+		}
+		
+		//Check for favicon
+		if ($this->use_favicon)
+		{
+			if ( ! file_exists($this->_get_link($this->favicon_location), 'favicon'))
+			{
+				$errors .= '<li>Favicon not found</li>';
+			}
+		}
+		
+		if (trim($errors))
+		{
+			show_error('The following errors were encountered in the head area: <ul>'.$errors.'</ul>');
+		}
+	}
+
+	// --------------------------------------------------------------------------
 }
 
 /* End of file Head.php */
