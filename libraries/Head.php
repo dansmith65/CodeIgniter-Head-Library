@@ -84,7 +84,7 @@ class Head
 		$this->base_url	= $CI->config->item('base_url');
 		
 		// set default meta_content
-		$meta_content = 'text/html; charset='.$CI->config->item('charset');
+		$this->meta_content = 'text/html; charset='.$CI->config->item('charset');
 		
 		//Initialize the configs
 		if (count($config) > 0)
