@@ -10,7 +10,7 @@ h2. Original Author
 
 h2. Documentation
 
-http://dansmith65.github.com/test/
+"http://dansmith65.github.com/CodeIgniter-Head-Library/":http://dansmith65.github.com/CodeIgniter-Head-Library/
 
 h2. Changes in v2.0
 
