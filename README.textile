@@ -10,7 +10,7 @@ h2. Original Author
 
 h2. Documentation
 
-Full documentation is included with the download.
+http://dansmith65.github.com/test/
 
 h2. Changes in v2.0
 
@@ -33,4 +33,8 @@ h2. Changes in v2.0
 ** When adding packages, can now accept an array of packages OR | separated
 * CSS and JS can be conditional by providing an optional parameter
 * All inline CSS and JS is grouped into the same script tag
-* ... probably more stuff that I can't think of right now
+
+h2. Changes in v2.1
+
+* bugfix
+* moved docs to gh-pages branch
